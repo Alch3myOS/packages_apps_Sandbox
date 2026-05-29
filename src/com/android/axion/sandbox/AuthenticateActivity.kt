@@ -318,7 +318,9 @@ fun AuthenticateScreen(
                 onPasswordEntered = { password -> securityManager.verifyCredential(password) },
                 onBack = onCancel,
                 biometricType = biometricType,
-                onBiometricClick = onBiometricClick
+                onBiometricClick = onBiometricClick,
+                requestInitialFocus = biometricType == SandboxSecurityManager.BiometricType.NONE ||
+                    !isPreferBiometric
             )
         }
         SecurityType.PATTERN -> {
