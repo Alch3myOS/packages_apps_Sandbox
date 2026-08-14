@@ -43,8 +43,12 @@
     <string name="lock_app_title">锁定应用</string>
     <string name="lock_app_description">需要认证以打开此应用</string>
     <string name="hide_app_title">隐藏应用</string>
-    <string name="hide_app_description_off">从启动器、其他应用程序中隐藏，并伪装安装来源</string>
-    <string name="hide_app_description_on">已从所有应用程序中隐藏，安装来源已伪装，应用程序启动已封锁</string>
+    <string name="hide_app_description_off">隐藏应用，使其不出现在启动器和其他应用中，阻止活动启动，并静音通知</string>
+    <string name="hide_app_description_on">隐藏应用，使其不出现在启动器和任何其他应用中，阻止活动启动，并完全静音通知</string>
+    <string name="hide_from_launcher_title">从启动器中隐藏</string>
+    <string name="hide_from_launcher_description_off">从主屏幕和应用抽屉中隐藏此应用图标</string>
+    <string name="hide_from_launcher_description_on">已从主屏幕和应用抽屉中隐藏（应用启动和通知仍保持开启。）</string>
+    <string name="hide_settings_title">应用隐藏选项</string>
     <string name="isolate_app_title">隔离应用</string>
     <string name="isolate_app_description">与其他应用程序隔离，限制权限和设置</string>
     <!-- Sandbox sub-settings -->
@@ -220,9 +224,9 @@
     <!-- Timeout options -->
     <string name="timeout_15s">15 秒</string>
     <string name="timeout_30s">30 秒</string>
-    <string name="timeout_60s">1 minute</string>
+    <string name="timeout_60s">1分钟</string>
     <string name="timeout_120s">2 分钟</string>
-    <string name="timeout_300s">5 minutes</string>
+    <string name="timeout_300s">5 分钟</string>
     <!-- Authenticate activity -->
     <string name="auth_title_unlock">解锁 %s</string>
     <string name="auth_prompt">输入您的沙盒凭据以解锁 %s</string>
