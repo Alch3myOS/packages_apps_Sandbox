@@ -156,7 +156,9 @@ data class AppInfo(
     val isSystem: Boolean = false,
     val userId: Int = 0,
     val isClone: Boolean = false
-)
+) {
+    val key: String get() = "${packageName}_$userId"
+}
 
 private data class UserSandboxPackages(
     val locked: Set<String> = emptySet(),
@@ -901,7 +903,7 @@ fun AppDetailScreen(
     onLaunch: (AppInfo) -> Unit,
     isSecuritySetup: Boolean = false
 ) {
-    val bitmap = remember(app.packageName) {
+    val bitmap = remember(app.packageName, app.userId) {
         app.icon.toBitmap(128, 128)
     }
 
@@ -1162,7 +1164,7 @@ fun AppsTab(
             }
 
             if (isSecuritySetup && privateApps.isNotEmpty() && effectiveExpanded) {
-                items(privateApps, key = { "private_${it.packageName}" }) { app ->
+                items(privateApps, key = { "private_${it.key}" }) { app ->
                     AppGridItem(
                         app = app,
                         onClick = {
@@ -1189,7 +1191,7 @@ fun AppsTab(
                     )
                 }
 
-                items(sandboxedApps, key = { "sandboxed_${it.packageName}" }) { app ->
+                items(sandboxedApps, key = { "sandboxed_${it.key}" }) { app ->
                     AppGridItem(
                         app = app,
                         onClick = {
@@ -1240,7 +1242,7 @@ fun AppsTab(
                 )
             }
 
-            items(regularApps, key = { "regular_${it.packageName}" }) { app ->
+            items(regularApps, key = { "regular_${it.key}" }) { app ->
                 AppGridItem(
                     app = app,
                     onClick = {
@@ -1261,7 +1263,7 @@ fun AppsTab(
                     )
                 }
 
-                items(systemApps, key = { "system_${it.packageName}" }) { app ->
+                items(systemApps, key = { "system_${it.key}" }) { app ->
                     AppGridItem(
                         app = app,
                         onClick = {
