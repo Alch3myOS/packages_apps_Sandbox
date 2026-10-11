@@ -33,6 +33,7 @@ import android.util.IconDrawableFactory
 import android.util.Log
 import android.util.LruCache
 import android.view.View
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -206,10 +207,10 @@ private data class UserSandboxPackages(
 private fun AxSandboxManager?.getUserPackages(userId: Int): UserSandboxPackages {
     if (this == null) return UserSandboxPackages()
     try {
-        val locked = getLockedPackages(userId)?.toSet() ?: emptySet()
-        val hidden = getHiddenPackages(userId)?.toSet() ?: emptySet()
-        val launcherHidden = getHiddenFromLauncherPackages(userId)?.toSet() ?: emptySet()
-        val sandboxed = getSandboxedPackages(userId)?.toSet() ?: emptySet()
+        val locked = getLockedPackages()?.toSet() ?: emptySet()
+        val hidden = getHiddenPackages()?.toSet() ?: emptySet()
+        val launcherHidden = getHiddenFromLauncherPackages()?.toSet() ?: emptySet()
+        val sandboxed = getSandboxedPackages()?.toSet() ?: emptySet()
         return UserSandboxPackages(locked, hidden, launcherHidden, sandboxed)
     } catch (e: Exception) {
         return UserSandboxPackages()
@@ -736,18 +737,18 @@ private fun SandboxOptionsDropdown(
     var expanded by rememberSaveable { mutableStateOf(app.isSandboxed) }
 
     var restrictInternet by remember(app.packageName, app.userId) {
-        val gids = sandboxManager?.getRestrictedGids(app.packageName, app.userId)
+        val gids = sandboxManager?.getRestrictedGids(app.packageName)
         mutableStateOf(gids != null && gids.contains(AxSandboxManager.GID_INET))
     }
 
     var restrictStorage by remember(app.packageName, app.userId) {
-        val gids = sandboxManager?.getRestrictedGids(app.packageName, app.userId)
+        val gids = sandboxManager?.getRestrictedGids(app.packageName)
         val storageGids = AxSandboxManager.STORAGE_GIDS
         mutableStateOf(gids != null && storageGids.any { gids.contains(it) })
     }
 
     var dataIsolation by remember(app.packageName, app.userId) {
-        mutableStateOf(sandboxManager?.isSandboxDataIsolationEnabled(app.packageName, app.userId) == true)
+        mutableStateOf(sandboxManager?.isSandboxDataIsolationEnabled(app.packageName) == true)
     }
 
     PreferenceGroup(
@@ -772,7 +773,7 @@ private fun SandboxOptionsDropdown(
                     if (sandboxManager == null) return@SwitchPreference
                     restrictInternet = !restrictInternet
                     scope.launch(Dispatchers.IO) {
-                        val current = sandboxManager.getRestrictedGids(app.packageName, app.userId)
+                        val current = sandboxManager.getRestrictedGids(app.packageName)
                                 ?.toMutableList() ?: mutableListOf()
                         if (restrictInternet) {
                             if (!current.contains(AxSandboxManager.GID_INET))
@@ -781,7 +782,7 @@ private fun SandboxOptionsDropdown(
                             current.remove(AxSandboxManager.GID_INET)
                         }
                         sandboxManager.setRestrictedGids(app.packageName,
-                                current.toIntArray(), app.userId)
+                                current.toIntArray())
                     }
                 },
             )
@@ -795,7 +796,7 @@ private fun SandboxOptionsDropdown(
                     if (sandboxManager == null) return@SwitchPreference
                     restrictStorage = !restrictStorage
                     scope.launch(Dispatchers.IO) {
-                        val current = sandboxManager.getRestrictedGids(app.packageName, app.userId)
+                        val current = sandboxManager.getRestrictedGids(app.packageName)
                                 ?.toMutableList() ?: mutableListOf()
                         val storageGids = AxSandboxManager.STORAGE_GIDS
                         if (restrictStorage) {
@@ -806,7 +807,7 @@ private fun SandboxOptionsDropdown(
                             current.removeAll(storageGids.toSet())
                         }
                         sandboxManager.setRestrictedGids(app.packageName,
-                                current.toIntArray(), app.userId)
+                                current.toIntArray())
                     }
                 },
             )
@@ -821,7 +822,7 @@ private fun SandboxOptionsDropdown(
                     dataIsolation = !dataIsolation
                     scope.launch(Dispatchers.IO) {
                         sandboxManager.setSandboxDataIsolationEnabled(
-                                app.packageName, dataIsolation, app.userId)
+                                app.packageName, dataIsolation)
                     }
                 },
             )
@@ -870,10 +871,10 @@ private fun SpoofSettingsDropdown(
         mutableStateMapOf<String, Boolean>().apply {
             SPOOF_SETTINGS.forEach { entry ->
                 put(entry.key, sandboxManager.isSpoofSettingEnabled(
-                        app.packageName, entry.key, app.userId))
+                        app.packageName, entry.key))
             }
             put("accessibility_spoof", SPOOF_ACCESSIBILITY_KEYS.all { key ->
-                sandboxManager.isSpoofSettingEnabled(app.packageName, key, app.userId)
+                sandboxManager.isSpoofSettingEnabled(app.packageName, key)
             })
         }
     }
@@ -897,7 +898,7 @@ private fun SpoofSettingsDropdown(
                         enabledSettings[entry.key] = newValue
                         scope.launch(Dispatchers.IO) {
                             sandboxManager.setSpoofSettingEnabled(
-                                    app.packageName, entry.key, newValue, app.userId)
+                                    app.packageName, entry.key, newValue)
                         }
                     },
                 )
@@ -915,7 +916,7 @@ private fun SpoofSettingsDropdown(
                     scope.launch(Dispatchers.IO) {
                         SPOOF_ACCESSIBILITY_KEYS.forEach { key ->
                             sandboxManager.setSpoofSettingEnabled(
-                                    app.packageName, key, newValue, app.userId)
+                                    app.packageName, key, newValue)
                         }
                     }
                 },
@@ -2002,7 +2003,7 @@ private fun NotificationItem(
 private suspend fun toggleAppLock(context: Context, packageName: String, userId: Int, lock: Boolean) = withContext(Dispatchers.IO) {
     try {
         val sandboxManager = context.getSystemService(Context.AX_SANDBOX_SERVICE) as? AxSandboxManager ?: return@withContext
-        if (lock) sandboxManager.addLockedApp(packageName, userId) else sandboxManager.removeLockedApp(packageName, userId)
+        if (lock) sandboxManager.addLockedApp(packageName) else sandboxManager.removeLockedApp(packageName)
     } catch (e: Exception) {
         Log.e(TAG, "Error toggling app lock for $packageName", e)
     }
@@ -2011,7 +2012,7 @@ private suspend fun toggleAppLock(context: Context, packageName: String, userId:
 private suspend fun toggleAppHidden(context: Context, packageName: String, userId: Int, hidden: Boolean) = withContext(Dispatchers.IO) {
     try {
         val sandboxManager = context.getSystemService(Context.AX_SANDBOX_SERVICE) as? AxSandboxManager ?: return@withContext
-        sandboxManager.setPackageHidden(packageName, hidden, userId)
+        sandboxManager.setPackageHidden(packageName, hidden)
     } catch (e: Exception) {
         Log.e(TAG, "Error toggling app hidden for $packageName", e)
     }
@@ -2020,7 +2021,7 @@ private suspend fun toggleAppHidden(context: Context, packageName: String, userI
 private suspend fun toggleAppLauncherHidden(context: Context, packageName: String, userId: Int, hidden: Boolean) = withContext(Dispatchers.IO) {
     try {
         val sandboxManager = context.getSystemService(Context.AX_SANDBOX_SERVICE) as? AxSandboxManager ?: return@withContext
-        sandboxManager.setPackageHiddenFromLauncher(packageName, hidden, userId)
+        sandboxManager.setPackageHiddenFromLauncher(packageName, hidden)
     } catch (e: Exception) {
         Log.e(TAG, "Error toggling app launcher hidden for $packageName", e)
     }
@@ -2029,7 +2030,7 @@ private suspend fun toggleAppLauncherHidden(context: Context, packageName: Strin
 private suspend fun toggleAppSandboxed(context: Context, packageName: String, userId: Int, sandboxed: Boolean) = withContext(Dispatchers.IO) {
     try {
         val sandboxManager = context.getSystemService(Context.AX_SANDBOX_SERVICE) as? AxSandboxManager ?: return@withContext
-        if (sandboxed) sandboxManager.addSandboxedPackage(packageName, userId) else sandboxManager.removeSandboxedPackage(packageName, userId)
+        if (sandboxed) sandboxManager.addSandboxedPackage(packageName) else sandboxManager.removeSandboxedPackage(packageName)
     } catch (e: Exception) {
         Log.e(TAG, "Error toggling app sandboxed for $packageName", e)
     }
